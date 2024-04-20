@@ -11,20 +11,13 @@ import Navbar from "./components/Navbar";
 const root = createRoot(document.getElementById("root"));
 
 function App() {
-  const [theme, setTheme] = useState("light");
-
-  const toggleTheme = () => {
-    setTheme(theme === "light" ? "dark" : "light");
-  };
-
-  console.log("Hello there")
 
   return (
     <React.StrictMode>
       <Router>
-        <div className={`App ${theme}`}>
+        <div className={`App`}>
           <div className="content  h-[100vh] max-w-[100%] overflow-hidden">
-            <Navbar theme={theme} toggleTheme={toggleTheme} />
+            <Navbar />
             <Routes>
               <Route path="/" element={<ChatRoom />} />
               <Route path="/login" element={<Login />} />

@@ -2,177 +2,94 @@ import ChatComponent from "./Chat";
 import UserSelect from "./Users";
 import MessageList from "./Messages";
 import { useEffect, useState } from "react";
-import VideoUploader from "./VideoUploader";
-import Videos from "./Videos";
-import Images from "./Images";
-import UserDetails from "./UserDetails";
-import Voices from "./Voices";
+import UserCheck from "./UserCheck";
 
 function MessageRoom() {
   const [mediaOpened, setMediaOpened] = useState(false);
-  const [mediaType, setMediaType] = useState("videos");
-  const [pfp, setPFP] = useState();
-  const [loading, setLoading] = useState()
+  const [userType, setUserType] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [activeUsersCount, setActiveUsersCount] = useState(0); // State to store the count of active users
 
   useEffect(() => {
-    const fetchProfilePicture = async () => {
+    if (!localStorage.getItem("loggedInUserUsername")) {
+      window.location.replace("/login");
+    }
+  });
+
+  useEffect(() => {
+    async function fetchUserType() {
       try {
-        const response = await fetch("http://localhost:4000/profile");
-        if (response.ok) {
-          const data = await response.json();
-          const loggedInUsername = localStorage.getItem("selectedUserUsername");
-          const profilePicture = data.profile.find(
-            (user) => user.user === loggedInUsername
-          );
-          setPFP(profilePicture ? profilePicture.filename : null);
-        } else {
-          console.error("Failed to fetch profile pictures");
-        }
+        const response = await fetch(
+          `http://localhost:4000/userType/${localStorage.getItem(
+            "loggedInUserUsername"
+          )}`
+        );
+        const data = await response.json();
+        setUserType(data.userType);
+        setLoading(false);
       } catch (error) {
-        console.error("Error fetching profile pictures:", error);
-      } finally {
-        setLoading(false); // Set loading to false regardless of success or failure
+        console.error("Error fetching user type:", error);
+        setLoading(false);
       }
-    };
-    fetchProfilePicture();
+    }
+
+    fetchUserType();
+  }, []);
+
+  useEffect(() => {
+    async function fetchActiveUsersCount() {
+      try {
+        const response = await fetch("http://localhost:4000/users");
+        const data = await response.json();
+        const activeUsers = data.users.filter(
+          (user) => user.status === "active"
+        );
+        setActiveUsersCount(activeUsers.length);
+      } catch (error) {
+        console.error("Error fetching active users count:", error);
+      }
+    }
+
+    fetchActiveUsersCount();
   }, []);
 
   return (
-    <div className="flex">
-      <UserSelect />
-      {localStorage.getItem("selectedUserUsername") ? (
-        <div className="flex flex-col w-[75%] border-2 px-2 py-1 border-gray-700 mr-2 my-1">
-          {mediaOpened ? (
-            <div className="w-[100%]">
-              <div className="flex items-center border-b-2 border-gray-700 justify-between w-[95%] mx-auto">
-                <h2>
-                  <img
-                    src={
-                      "http://localhost:4000/uploads/profile/" + pfp
-                    }
-                  />
-                  <strong>
-                    {localStorage.getItem("selectedUserUsername")}
-                  </strong>
-                </h2>
-                <div className="flex items-center">
-                  <button
-                    onClick={() => setMediaOpened(false)}
-                    className="mx-5 my-2"
-                  >
-                    Chat
-                  </button>
-                  {localStorage.getItem("selectedUserUsername").split(",")
-                    .length === 1 && (
-                    <p className="mx-5 px-2 py-1 border-0.5 border-gray-700 rounded-md">
-                      Media
-                    </p>
-                  )}
+    <div className="flex justify-center items-center h-[92vh]">
+      {userType === "chatter" && (
+        <div className="flex w-full h-full">
+          {localStorage.getItem("selectedUserUsername") ? (
+            <>
+              <div className="w-[25%]">
+                <UserSelect />
+                <UserCheck />
+              </div>
+              <div className="flex flex-col w-[75%] px-2 py-1 bg-[#1e1e1e] mx-4 my-3 rounded-lg">
+                <div className="w-[100%] h-[100%]">
+                  <MessageList />
+                  <ChatComponent />
                 </div>
               </div>
-              {mediaType === "images" && (
-                <div className="flex flex-col">
-                  <div className="flex py-2 border-b-1 border-gray-700">
-                    <button
-                      onClick={() => setMediaType("videos")}
-                      className="ml-5"
-                    >
-                      Videos
-                    </button>
-                    <button
-                      onClick={() => setMediaType("voices")}
-                      className="mx-5"
-                    >
-                      Voices
-                    </button>
-                    <p className="px-2 py-1 border-0.5 border-gray-700 rounded-md">
-                      Images
-                    </p>
-                  </div>
-                  <div className="w-[95%] mx-auto">
-                    <Images />
-                  </div>
-                </div>
-              )}
-              {mediaType === "videos" && (
-                <div className="flex flex-col">
-                  <div className="flex my-2">
-                    <p className="mx-5 px-2 py-1 border-0.5 border-gray-700 rounded-md">
-                      Videos
-                    </p>
-                    <button
-                      onClick={() => setMediaType("voices")}
-                      className="mr-5"
-                    >
-                      Voices
-                    </button>
-                    <button onClick={() => setMediaType("images")}>
-                      Images
-                    </button>
-                  </div>
-                  <div className="w-[95%] mx-auto">
-                    <Videos />
-                  </div>
-                </div>
-              )}
-              {mediaType === "voices" && (
-                <div className="flex flex-col">
-                  <div className="flex my-2">
-                    <button
-                      onClick={() => setMediaType("videos")}
-                      className="ml-5"
-                    >
-                      Videos
-                    </button>
-                    <p className="mx-5 px-2 py-1 border-0.5 border-gray-700 rounded-md">
-                      Voices
-                    </p>
-                    <button onClick={() => setMediaType("images")}>
-                      Images
-                    </button>
-                  </div>
-                  <div className="w-[95%] mx-auto">
-                    <Voices />
-                  </div>
-                </div>
-              )}
-            </div>
+            </>
           ) : (
-            <div className="w-[100%]">
-              <div className="flex items-center border-b-2 border-gray-700 justify-between w-[95%] mx-auto">
-                <h2 className="my-3 flex items-center space-x-2">
-                  <img
-                    src={
-                      "http://localhost:4000/uploads/profile/" + pfp
-                    }
-                    className="w-[50px] aspect-square rounded-full border-2 border-gray-700 p-1"
-                  />
-                  <strong>
-                    {localStorage.getItem("selectedUserUsername")}
-                  </strong>
-                </h2>
-                {localStorage.getItem("selectedUserUsername").split(",")
-                  .length === 1 && (
-                  <div className="flex items-center">
-                    <p className="mx-5 px-2 py-1 border-0.5 border-gray-700 rounded-md">
-                      Chat
-                    </p>
-                    <button
-                      onClick={() => setMediaOpened(true)}
-                      className="mx-5 my-2"
-                    >
-                      Media
-                    </button>
-                  </div>
-                )}
+            <div className="flex flex-col w-[25%] mx-auto justify-center my-auto items-center text-center">
+              <div>
+                Welcome back! Get to the work. {activeUsersCount} users are
+                waiting for you.
               </div>
-              <MessageList />
-              <ChatComponent />
+              <UserSelect />
             </div>
           )}
         </div>
-      ) : (
-        <UserDetails />
+      )}
+      {userType === "user" && (
+        <>
+          <div className="flex flex-col w-[65%] h-[95%] my-auto rounded-lg px-2 py-1 bg-[#1e1e1e] mr-2">
+            <div className="w-[100%] h-[100%]">
+              <MessageList />
+              <ChatComponent />
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

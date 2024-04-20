@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
 
-const UserSelect = ({ onSelect, currentUserId }) => {
+const UserSelect = () => {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState("");
-  const [checkedUsers, setCheckedUsers] = useState([]);
-  const [groupMessages, setGroupMessages] = useState(new Set()); // Use a Set to maintain unique group names
+  const [userStatuses, setUserStatuses] = useState({});
 
   useEffect(() => {
     if (!localStorage.getItem("loggedInUserUsername")) {
@@ -14,7 +13,6 @@ const UserSelect = ({ onSelect, currentUserId }) => {
 
   useEffect(() => {
     fetchUsers();
-    fetchGroups(); // Fetch groups when component mounts
   }, []);
 
   const fetchUsers = async () => {
@@ -22,11 +20,11 @@ const UserSelect = ({ onSelect, currentUserId }) => {
       const response = await fetch("http://localhost:4000/users");
       if (response.ok) {
         const data = await response.json();
-        // Exclude the currently logged-in user from the list
         const filteredUsers = data.users.filter(
           (user) => user._id !== localStorage.getItem("userId")
         );
         setUsers(filteredUsers);
+        await fetchAndSetUserStatuses(filteredUsers);
       } else {
         console.error("Failed to fetch users");
       }
@@ -35,24 +33,20 @@ const UserSelect = ({ onSelect, currentUserId }) => {
     }
   };
 
-  const fetchGroups = async () => {
+  const fetchAndSetUserStatuses = async (users) => {
     try {
-      const response = await fetch(
-        "http://localhost:4000/groupmessages?username=" +
-          localStorage.getItem("loggedInUserUsername")
-      );
-      if (response.ok) {
+      const statusPromises = users.map(async (user) => {
+        const response = await fetch(
+          `http://localhost:4000/status/${user.username}`
+        );
         const data = await response.json();
-        const uniqueGroups = new Set(); // Initialize a Set to store unique group names
-        data.messages.forEach((message) => {
-          uniqueGroups.add(message.to); // Add each group name to the Set
-        });
-        setGroupMessages(uniqueGroups); // Set the state with unique group names
-      } else {
-        console.error("Failed to fetch users");
-      }
+        return { [user.username]: data.status };
+      });
+      const statuses = await Promise.all(statusPromises);
+      const mergedStatuses = Object.assign({}, ...statuses);
+      setUserStatuses(mergedStatuses);
     } catch (error) {
-      console.error("Error fetching users:", error);
+      console.error("Error fetching user statuses:", error);
     }
   };
 
@@ -67,38 +61,25 @@ const UserSelect = ({ onSelect, currentUserId }) => {
     window.location.reload();
   };
 
-  const handleCheckboxChange = (username) => {
-    const isChecked = checkedUsers.includes(username);
-    if (isChecked) {
-      setCheckedUsers(checkedUsers.filter((user) => user !== username));
-    } else {
-      setCheckedUsers([...checkedUsers, username]);
-    }
-  };
-
-  const handleCreateString = () => {
-    const updatedCheckedUsers = [...checkedUsers];
-    const loggedInUsername = localStorage.getItem("loggedInUserUsername");
-    if (!updatedCheckedUsers.includes(loggedInUsername)) {
-      updatedCheckedUsers.push(loggedInUsername);
-    }
-    console.log(updatedCheckedUsers.join(","));
-    localStorage.setItem("selectedUserUsername", updatedCheckedUsers.join(","));
-    window.location.reload();
+  const getUserTextColor = (username) => {
+    const status = userStatuses[username];
+    return status === "done" ? "text-gray-500" : "text-blue-500";
   };
 
   return (
-    <div className="w-[25%] flex flex-col px-2 py-1 max-h-[75vh]">
+    <div className="w-[100%] flex flex-col px-2 py-1 max-h-[75vh]">
       <div className="w-full max-h-[60vh] overflow-y-auto overflow-x-hidden">
-        {users.map((user) => (
+        {users.map((user, index) => (
           <div key={user._id}>
             {" "}
             {user.username !== localStorage.getItem("loggedInUserUsername") && (
               <div
-                className="flex w-[100%] border-2 border-gray-700 px-2 py-1 justify-between"
+                className={`flex w-[100%] bg-[#1e1e1e] rounded-md mx-1 my-2 px-4 py-2 justify-between ${getUserTextColor(
+                  user.username
+                )}`}
                 onClick={() => handleChange(user.username)}
               >
-                <div>{user.username}</div>
+                <div>User {index}</div>
                 {user.username ===
                 localStorage.getItem("selectedUserUsername") ? (
                   <div>{"<"}</div>
@@ -109,32 +90,7 @@ const UserSelect = ({ onSelect, currentUserId }) => {
             )}
           </div>
         ))}
-        {[...groupMessages].map((groupName, i) => (
-          <div
-            key={i}
-            onClick={() => {
-              localStorage.setItem("selectedUserUsername", groupName);
-              window.location.reload();
-            }}
-            className="flex w-[100%] border-2 border-gray-700 px-2 py-1 justify-between"
-          >
-            {groupName}
-          </div>
-        ))}
       </div>
-      {users.map(
-        (user, i) =>
-          user.username !== localStorage.getItem("loggedInUserUsername") && ( // Exclude logged-in user from being displayed as a checkbox
-            <div key={i}>
-              <input
-                type="checkbox"
-                onChange={() => handleCheckboxChange(user.username)}
-              />
-              <label>{user.username}</label>
-            </div>
-          )
-      )}
-      <button onClick={handleCreateString}>Create Group</button>
     </div>
   );
 };

@@ -8,8 +8,8 @@
 }
 
 .content {
-  background-color: #f0f0f0; /* Light background color */
-  color: #333; /* Light text color */
+  background-color: #323232; /* Light background color */
+  color: #004d99; /* Light text color */
 }
 
 /* Dark theme styles */
@@ -24,4 +24,18 @@ button {
   border-radius: 10px;
 }
 
-/* Additional styles for specific elements can be added here */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #323232;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e1e1e;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #1e1e1e;
+}
